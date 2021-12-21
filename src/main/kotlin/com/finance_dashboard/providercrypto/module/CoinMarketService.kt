@@ -1,7 +1,10 @@
 package com.finance_dashboard.providercrypto.module
 
 import com.finance_dashboard.providercrypto.config.CoinProperties
+import com.finance_dashboard.providercrypto.model.CoinDto
+import com.finance_dashboard.providercrypto.model.Cost
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import finance_dashboard.CurrencyService
 import org.apache.http.HttpEntity
@@ -22,7 +25,7 @@ import java.util.*
 
 @Service
 class CoinMarketService(
-    private val coinProperties: CoinProperties
+    coinProperties: CoinProperties
 ) {
 
     private val baseUri = coinProperties.apiUri
@@ -49,7 +52,7 @@ class CoinMarketService(
     ) {
         var result = ""
         try {
-            result = makeAPICall(uri, parameters)
+            result = makeAPICall(uri, parameters, true)
             println(result)
         } catch (e: IOException) {
             println("Error: cannot access content - $e")
@@ -63,14 +66,37 @@ class CoinMarketService(
         )
     }
 
-    fun makeAPICall(uri: String?, parameters: List<NameValuePair?>?): String {
-        var responseContent = ""
+    fun getCoinList(): MutableList<CoinDto> {
+        val coins = listOf("bitcoin", "ethereum", "binancecoin", "tether", "solana")
+        val coinList = mutableListOf<CoinDto>()
+        coins.forEach {
+            val fromJson = Gson().fromJson(
+                makeAPICall("https://api.coingecko.com/api/v3/coins/$it/tickers", listOf()),
+                JsonObject::class.java
+            )
+            val jsonObject = (fromJson.get("tickers") as JsonArray).get(1) as JsonObject
+            val name = fromJson.get("name").asString
+            val ticker = jsonObject.get("base").asString
+            val price = jsonObject.get("last").asFloat
+            coinList.add(
+                CoinDto(
+                    name = name,
+                    ticker = ticker,
+                    cost = Cost(low = price, high = price, currency = "USD")
+                )
+            )
+        }
+        return coinList
+    }
+
+    fun makeAPICall(uri: String?, parameters: List<NameValuePair?>?, aut: Boolean = false): String {
+        var responseContent: String
         val query = URIBuilder(uri)
         query.addParameters(parameters)
         val client: CloseableHttpClient = HttpClients.createDefault()
         val request = HttpGet(query.build())
         request.setHeader(HttpHeaders.ACCEPT, "application/json")
-        request.addHeader("CB-ACCESS-KEY ", apikey)
+        if (aut) request.addHeader("CB-ACCESS-KEY ", apikey)
         val response: CloseableHttpResponse = client.execute(request)
         response.use {
             println(it.statusLine)

@@ -6,15 +6,17 @@ import org.springframework.stereotype.Service
 
 @Service
 class ScheduledCoinMessage(
-    private val coinMarketService: CoinMarketService
+    private val coinMarketService: CoinMarketService,
+    private val simpMessagingTemplate: SimpMessagingTemplate
 ) {
 
-    @Scheduled(fixedRate = 5000)
-    fun sendMessage(simpMessagingTemplate: SimpMessagingTemplate) {
-        println("keks")
-        simpMessagingTemplate.convertAndSend(
-            "/coin/fetch",
-            //OutputMessage("Chuck Norris (@Scheduled)", chuckNorris().fact(), time)
-        )
+    @Scheduled(fixedRate = 10000)
+    fun sendMessage() {
+        coinMarketService.getCoinList().forEach {
+            simpMessagingTemplate.convertAndSend(
+                "/coin/fetch",
+                it
+            )
+        }
     }
 }
