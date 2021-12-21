@@ -17,7 +17,7 @@ import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.util.EntityUtils
-import org.springframework.context.annotation.Bean
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.URISyntaxException
@@ -30,6 +30,7 @@ class CoinMarketService(
 
     private val baseUri = coinProperties.apiUri
     private val apikey = coinProperties.apiKey
+    private val logger = LoggerFactory.getLogger(CoinMarketService::class.java)
 
     fun getDateValuePrices(request: CurrencyService.TimeSlice): MutableList<Float> {
         val amountValues = mutableListOf<Float>()
@@ -53,11 +54,11 @@ class CoinMarketService(
         var result = ""
         try {
             result = makeAPICall(uri, parameters, true)
-            println(result)
+            logger.info("")
         } catch (e: IOException) {
-            println("Error: cannot access content - $e")
+            logger.error("Error: cannot access content - $e")
         } catch (e: URISyntaxException) {
-            println("Error: Invalid URL $e")
+            logger.error("Error: Invalid URL $e")
         }
         val fromJson = Gson().fromJson(result, JsonObject::class.java)
         val data = fromJson.get("data") as JsonObject
@@ -70,10 +71,15 @@ class CoinMarketService(
         val coins = listOf("bitcoin", "ethereum", "binancecoin", "tether", "solana")
         val coinList = mutableListOf<CoinDto>()
         coins.forEach {
-            val fromJson = Gson().fromJson(
-                makeAPICall("https://api.coingecko.com/api/v3/coins/$it/tickers", listOf()),
-                JsonObject::class.java
-            )
+            var fromJson = JsonObject()
+            try {
+                fromJson = Gson().fromJson(
+                    makeAPICall("https://api.coingecko.com/api/v3/coins/$it/tickers", listOf()),
+                    JsonObject::class.java
+                )
+            } catch (e: Exception) {
+                logger.error("Error fetch coins ticker - $e")
+            }
             val jsonObject = (fromJson.get("tickers") as JsonArray).get(1) as JsonObject
             val name = fromJson.get("name").asString
             val ticker = jsonObject.get("base").asString
@@ -99,12 +105,11 @@ class CoinMarketService(
         if (aut) request.addHeader("CB-ACCESS-KEY ", apikey)
         val response: CloseableHttpResponse = client.execute(request)
         response.use {
-            println(it.statusLine)
+            //println(it.statusLine)
             val entity: HttpEntity = it.entity
             responseContent = EntityUtils.toString(entity)
             EntityUtils.consume(entity)
         }
         return responseContent
     }
-
 }

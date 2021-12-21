@@ -9,3 +9,4 @@ app:
   coin:
     api-key: ${CRYPTO_KEY}
     api-uri: ${CRYPTO_URI}
+    delay: ${CRYPTO_DELAY}
