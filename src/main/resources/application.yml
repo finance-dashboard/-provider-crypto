@@ -1,0 +1,11 @@
+server:
+  port: ${CRYPTO_PORT}
+
+grpc:
+  server:
+    port: ${CRYPTO_GRPC_PORT}
+
+app:
+  coin:
+    api-key: ${CRYPTO_KEY}
+    api-uri: ${CRYPTO_URI}

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package finance_dashboard;
+
+message TimeSlice {
+  string start = 1;
+  string end = 2;
+  string currencyCode = 3;
+}
+
+message Value {
+  float value = 1;
+}
+
+service CurrencyProvider {
+  rpc GetCurrency(TimeSlice) returns (stream Value) {}
+}
