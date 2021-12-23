@@ -10,6 +10,8 @@ import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.TextWebSocketHandler
 import java.io.IOException
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -65,22 +67,23 @@ class WebSocketHandler(
             } catch (e: Exception) {
                 logger.warn("json null try-catch")
             }
-            if (coinList.isNotEmpty()) {
+            if (coinList.isNotEmpty())
                 cachedList = coinList.toList()
-                sessions.forEach {
-                    try {
-                        coinList.forEach { coin ->
-                            val message = TextMessage(Gson().toJson(coin))
-                            it.value.sendMessage(message)
-                            logger.info("Send coins {} to socketId: {}", message, it.key)
-                        }
-                    } catch (e: IOException) {
-                        logger.error("Error sending message")
-                    }
+            else
+                coinList = cachedList.toMutableList().onEach {
+                    it.time = DateTimeFormatter.ISO_INSTANT.format(Instant.now())
                 }
+            sessions.forEach {
+                try {
+                    coinList.forEach { coin ->
+                        val message = TextMessage(Gson().toJson(coin))
+                        it.value.sendMessage(message)
+                    }
+                } catch (e: IOException) {
+                    logger.error("Error sending message")
+                }
+                logger.info("Send coins to socketId: {}", it.key)
             }
         }
     }
 }
-
-

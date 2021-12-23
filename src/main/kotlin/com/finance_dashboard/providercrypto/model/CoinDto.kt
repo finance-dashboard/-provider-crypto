@@ -1,7 +1,7 @@
 package com.finance_dashboard.providercrypto.model
 
 class CoinDto(
-    val time: String = "",
+    var time: String = "",
     val name: String = "",
     val ticker: String = "",
     val cost: Cost? = null
