@@ -1,11 +1,11 @@
 package com.finance_dashboard.providercrypto.module
 
+import com.finance_dashboard.providercrypto.model.CoinDto
 import com.google.gson.Gson
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.web.socket.CloseStatus
-import org.springframework.web.socket.PongMessage
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.TextWebSocketHandler
@@ -21,10 +21,26 @@ class WebSocketHandler(
     private val logger = LoggerFactory.getLogger(WebSocketHandler::class.java)
     private val sessions: MutableMap<String, WebSocketSession> = ConcurrentHashMap()
 
+    companion object {
+        private var cachedList = listOf<CoinDto>()
+    }
+
     override fun afterConnectionEstablished(session: WebSocketSession) {
         logger.info("Connected ... " + session.id)
         sessions[session.id] = session
-        sendMessage()
+        sendCachedList(session)
+    }
+
+    fun sendCachedList(session: WebSocketSession) {
+        try {
+            cachedList.forEach {
+                val message = TextMessage(Gson().toJson(it))
+                session.sendMessage(message)
+                logger.info("Send coins {} to socketId: {}", message, session.id)
+            }
+        } catch (e: IOException) {
+            logger.error("Error sending message")
+        }
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
@@ -43,16 +59,24 @@ class WebSocketHandler(
     @Scheduled(fixedRateString = "\${app.coin.delay}")
     fun sendMessage() {
         if (sessions.isNotEmpty()) {
-            val coinList = coinMarketService.getCoinList()
-            sessions.forEach {
-                try {
-                    coinList.forEach { coin ->
-                        val message = TextMessage(Gson().toJson(coin))
-                        it.value.sendMessage(message)
-                        logger.info("Send coins {} to socketId: {}", message, it.key)
+            var coinList: MutableList<CoinDto> = mutableListOf()
+            try {
+                coinList = coinMarketService.getCoinList()
+            } catch (e: Exception) {
+                logger.warn("json null try-catch")
+            }
+            if (coinList.isNotEmpty()) {
+                cachedList = coinList.toList()
+                sessions.forEach {
+                    try {
+                        coinList.forEach { coin ->
+                            val message = TextMessage(Gson().toJson(coin))
+                            it.value.sendMessage(message)
+                            logger.info("Send coins {} to socketId: {}", message, it.key)
+                        }
+                    } catch (e: IOException) {
+                        logger.error("Error sending message")
                     }
-                } catch (e: IOException) {
-                    logger.error("Error sending message")
                 }
             }
         }
