@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConstructorBinding
 @ConfigurationProperties(prefix = "app.coin")
 data class CoinProperties(
     val apiKey: String = "",
-    val apiUri: String = ""
+    val apiUri: String = "",
+    val coins: String = ""
 )
 

@@ -4,7 +4,6 @@ import com.finance_dashboard.providercrypto.config.CoinProperties
 import com.finance_dashboard.providercrypto.model.CoinDto
 import com.finance_dashboard.providercrypto.model.Cost
 import com.google.gson.Gson
-import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import finance_dashboard.CurrencyService
 import org.apache.http.HttpEntity
@@ -18,6 +17,7 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.util.EntityUtils
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.URISyntaxException
@@ -30,6 +30,7 @@ class CoinMarketService(
 
     private val baseUri = coinProperties.apiUri
     private val apikey = coinProperties.apiKey
+    private val coins = coinProperties.coins
     private val logger = LoggerFactory.getLogger(CoinMarketService::class.java)
 
     fun getDateValuePrices(request: CurrencyService.TimeSlice): MutableList<Float> {
@@ -69,29 +70,33 @@ class CoinMarketService(
     }
 
     fun getCoinList(): MutableList<CoinDto> {
-        val coins = listOf("bitcoin", "ethereum", "binancecoin", "tether", "solana")
+        val coins = coins.split(";").toList()
         val coinList = mutableListOf<CoinDto>()
         coins.forEach {
             var fromJson = JsonObject()
             try {
                 fromJson = Gson().fromJson(
-                    makeAPICall("https://api.coingecko.com/api/v3/coins/$it/tickers", listOf()),
+                    makeAPICall("https://data.messari.io/api/v1/assets/$it/metrics", listOf()),
                     JsonObject::class.java
                 )
             } catch (e: Exception) {
                 logger.error("Error fetch coins ticker - $e")
             }
-            val jsonObject = (fromJson.get("tickers") as JsonArray).get(1) as JsonObject
-            val name = fromJson.get("name").asString
-            val ticker = jsonObject.get("base").asString
-            val price = jsonObject.get("last").asFloat
-            val time = jsonObject.get("timestamp").asString
+            val time = (fromJson.get("status") as JsonObject).get("timestamp").asString
+
+            val data = fromJson.get("data") as JsonObject
+            val name = data.get("name").asString
+            val ticker = data.get("symbol").asString
+            val marketData = (data.get("market_data") as JsonObject).get("ohlcv_last_1_hour") as JsonObject
+            val high = marketData.get("high").asFloat
+            val low = marketData.get("low").asFloat
+
             coinList.add(
                 CoinDto(
                     time = time,
                     name = name,
                     ticker = ticker,
-                    cost = Cost(low = price, high = price, currency = "USD")
+                    cost = Cost(high = high, low = low, currency = "USD")
                 )
             )
         }

@@ -8,7 +8,7 @@ class CoinDto(
 )
 
 class Cost(
-    val low: Float = 0F,
     val high: Float = 0F,
+    val low: Float = 0F,
     val currency: String = ""
 )
