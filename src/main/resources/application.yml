@@ -7,7 +7,7 @@ grpc:
 
 app:
   coin:
-    api-key: ${CRYPTO_KEY}
-    api-uri: ${CRYPTO_URI}
+    coinbase-key: ${CRYPTO_COINBASE_KEY}
+    messari-key: ${CRYPTO_MESSARI_KEY}
     delay: ${CRYPTO_DELAY}
     coins: ${CRYPTO_COINS}

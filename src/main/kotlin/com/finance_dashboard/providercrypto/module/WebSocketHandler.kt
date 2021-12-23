@@ -24,6 +24,7 @@ class WebSocketHandler(
     override fun afterConnectionEstablished(session: WebSocketSession) {
         logger.info("Connected ... " + session.id)
         sessions[session.id] = session
+        sendMessage()
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {

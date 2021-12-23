@@ -17,7 +17,6 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.util.EntityUtils
 import org.slf4j.LoggerFactory
-import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.URISyntaxException
@@ -28,15 +27,16 @@ class CoinMarketService(
     coinProperties: CoinProperties
 ) {
 
-    private val baseUri = coinProperties.apiUri
-    private val apikey = coinProperties.apiKey
+    private val coinBaseUri = "https://api.coinbase.com/v2"
+    private val coinBaseApiKey = coinProperties.coinbaseKey
+    private val messariApiKey = coinProperties.messariKey
     private val coins = coinProperties.coins
     private val logger = LoggerFactory.getLogger(CoinMarketService::class.java)
 
     fun getDateValuePrices(request: CurrencyService.TimeSlice): MutableList<Float> {
         logger.info("From GRPC: ${request.start}, ${request.end}, ${request.currencyCode}")
         val amountValues = mutableListOf<Float>()
-        val uri = "$baseUri/prices/${request.currencyCode}/spot"
+        val uri = "$coinBaseUri/prices/${request.currencyCode}/spot"
         val parameters: MutableList<NameValuePair> = ArrayList<NameValuePair>()
         //start
         parameters.add(BasicNameValuePair("date", request.start))
@@ -110,7 +110,10 @@ class CoinMarketService(
         val client: CloseableHttpClient = HttpClients.createDefault()
         val request = HttpGet(query.build())
         request.setHeader(HttpHeaders.ACCEPT, "application/json")
-        if (aut) request.addHeader("CB-ACCESS-KEY ", apikey)
+        if (aut)
+            request.addHeader("CB-ACCESS-KEY ", coinBaseApiKey)
+        else
+            request.addHeader("x-messari-api-key", messariApiKey)
         val response: CloseableHttpResponse = client.execute(request)
         response.use {
             //println(it.statusLine)
