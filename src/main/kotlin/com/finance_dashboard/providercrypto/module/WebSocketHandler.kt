@@ -42,16 +42,18 @@ class WebSocketHandler(
 
     @Scheduled(fixedRateString = "\${app.coin.delay}")
     fun sendMessage() {
-        val coinList = coinMarketService.getCoinList()
-        sessions.forEach {
-            try {
-                coinList.forEach { coin ->
-                    val message = TextMessage(Gson().toJson(coin))
-                    it.value.sendMessage(message)
-                    logger.info("Send coins {} to socketId: {}", message, it.key)
+        if (sessions.isNotEmpty()) {
+            val coinList = coinMarketService.getCoinList()
+            sessions.forEach {
+                try {
+                    coinList.forEach { coin ->
+                        val message = TextMessage(Gson().toJson(coin))
+                        it.value.sendMessage(message)
+                        logger.info("Send coins {} to socketId: {}", message, it.key)
+                    }
+                } catch (e: IOException) {
+                    logger.error("Error sending message")
                 }
-            } catch (e: IOException) {
-                logger.error("Error sending message")
             }
         }
     }

@@ -6,9 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      CRYPTO_COINBASE_KEY: <api key>
-      CRYPTO_MESSARI_KEY: <api key>
-      CRYPTO_DELAY: 10000
+      CRYPTO_COINBASE_KEY: <key>
+      CRYPTO_MESSARI_KEY: <key>
+      CRYPTO_DELAY: 10001
       CRYPTO_GRPC_PORT: 9092
       CRYPTO_PORT: 9091
       CRYPTO_COINS: btc;eth;bnb;usdt;sol
