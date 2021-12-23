@@ -33,6 +33,7 @@ class CoinMarketService(
     private val logger = LoggerFactory.getLogger(CoinMarketService::class.java)
 
     fun getDateValuePrices(request: CurrencyService.TimeSlice): MutableList<Float> {
+        logger.info("From GRPC: ${request.start}, ${request.end}, ${request.currencyCode}")
         val amountValues = mutableListOf<Float>()
         val uri = "$baseUri/prices/${request.currencyCode}/spot"
         val parameters: MutableList<NameValuePair> = ArrayList<NameValuePair>()
@@ -84,8 +85,10 @@ class CoinMarketService(
             val name = fromJson.get("name").asString
             val ticker = jsonObject.get("base").asString
             val price = jsonObject.get("last").asFloat
+            val time = jsonObject.get("timestamp").asString
             coinList.add(
                 CoinDto(
+                    time = time,
                     name = name,
                     ticker = ticker,
                     cost = Cost(low = price, high = price, currency = "USD")
