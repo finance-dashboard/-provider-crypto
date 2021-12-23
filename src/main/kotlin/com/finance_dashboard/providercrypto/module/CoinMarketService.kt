@@ -36,7 +36,7 @@ class CoinMarketService(
     fun getDateValuePrices(request: CurrencyService.TimeSlice): MutableList<Float> {
         logger.info("From GRPC: ${request.start}, ${request.end}, ${request.currencyCode}")
         val amountValues = mutableListOf<Float>()
-        val uri = "$coinBaseUri/prices/${request.currencyCode}/spot"
+        val uri = "$coinBaseUri/prices/${request.currencyCode}-USD/spot"
         val parameters: MutableList<NameValuePair> = ArrayList<NameValuePair>()
         //start
         parameters.add(BasicNameValuePair("date", request.start))
@@ -111,7 +111,7 @@ class CoinMarketService(
         val request = HttpGet(query.build())
         request.setHeader(HttpHeaders.ACCEPT, "application/json")
         if (aut)
-            request.addHeader("CB-ACCESS-KEY ", coinBaseApiKey)
+            request.addHeader("CB-ACCESS-KEY", coinBaseApiKey)
         else
             request.addHeader("x-messari-api-key", messariApiKey)
         val response: CloseableHttpResponse = client.execute(request)
