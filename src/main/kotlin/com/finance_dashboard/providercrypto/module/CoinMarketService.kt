@@ -17,6 +17,7 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.util.EntityUtils
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.URISyntaxException
@@ -34,16 +35,18 @@ class CoinMarketService(
     private val logger = LoggerFactory.getLogger(CoinMarketService::class.java)
 
     fun getDateValuePrices(request: CurrencyService.TimeSlice): MutableList<Float> {
-        logger.info("From GRPC: ${request.start}, ${request.end}, ${request.currencyCode}")
+        val dataStart = request.start.substring(0, 10)
+        val dataEnd = request.end.substring(0, 10)
+        logger.info("From GRPC: $dataStart, $dataEnd, ${request.currencyCode}")
         val amountValues = mutableListOf<Float>()
         val uri = "$coinBaseUri/prices/${request.currencyCode}-USD/spot"
         val parameters: MutableList<NameValuePair> = ArrayList<NameValuePair>()
         //start
-        parameters.add(BasicNameValuePair("date", request.start))
+        parameters.add(BasicNameValuePair("date", dataStart))
         parameters.clear()
         getAmountValue(uri, parameters, amountValues)
         //end
-        parameters.add(BasicNameValuePair("date", request.end))
+        parameters.add(BasicNameValuePair("date", dataEnd))
         getAmountValue(uri, parameters, amountValues)
         return amountValues
     }
