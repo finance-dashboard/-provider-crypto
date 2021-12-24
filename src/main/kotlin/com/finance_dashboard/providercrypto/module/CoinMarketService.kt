@@ -4,7 +4,6 @@ import com.finance_dashboard.providercrypto.config.CoinProperties
 import com.finance_dashboard.providercrypto.model.CoinDto
 import com.finance_dashboard.providercrypto.model.Cost
 import com.google.gson.Gson
-import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import finance_dashboard.CurrencyService
 import org.apache.http.HttpEntity
@@ -18,6 +17,7 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.util.EntityUtils
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.URISyntaxException
@@ -28,20 +28,25 @@ class CoinMarketService(
     coinProperties: CoinProperties
 ) {
 
-    private val baseUri = coinProperties.apiUri
-    private val apikey = coinProperties.apiKey
+    private val coinBaseUri = "https://api.coinbase.com/v2"
+    private val coinBaseApiKey = coinProperties.coinbaseKey
+    private val messariApiKey = coinProperties.messariKey
+    private val coins = coinProperties.coins
     private val logger = LoggerFactory.getLogger(CoinMarketService::class.java)
 
     fun getDateValuePrices(request: CurrencyService.TimeSlice): MutableList<Float> {
+        val dataStart = request.start.substring(0, 10)
+        val dataEnd = request.end.substring(0, 10)
+        logger.info("From GRPC: $dataStart, $dataEnd, ${request.currencyCode}")
         val amountValues = mutableListOf<Float>()
-        val uri = "$baseUri/prices/${request.currencyCode}/spot"
+        val uri = "$coinBaseUri/prices/${request.currencyCode}-USD/spot"
         val parameters: MutableList<NameValuePair> = ArrayList<NameValuePair>()
         //start
-        parameters.add(BasicNameValuePair("date", request.start))
+        parameters.add(BasicNameValuePair("date", dataStart))
         parameters.clear()
         getAmountValue(uri, parameters, amountValues)
         //end
-        parameters.add(BasicNameValuePair("date", request.end))
+        parameters.add(BasicNameValuePair("date", dataEnd))
         getAmountValue(uri, parameters, amountValues)
         return amountValues
     }
@@ -68,27 +73,33 @@ class CoinMarketService(
     }
 
     fun getCoinList(): MutableList<CoinDto> {
-        val coins = listOf("bitcoin", "ethereum", "binancecoin", "tether", "solana")
+        val coins = coins.split(";").toList()
         val coinList = mutableListOf<CoinDto>()
         coins.forEach {
             var fromJson = JsonObject()
             try {
                 fromJson = Gson().fromJson(
-                    makeAPICall("https://api.coingecko.com/api/v3/coins/$it/tickers", listOf()),
+                    makeAPICall("https://data.messari.io/api/v1/assets/$it/metrics", listOf()),
                     JsonObject::class.java
                 )
             } catch (e: Exception) {
                 logger.error("Error fetch coins ticker - $e")
             }
-            val jsonObject = (fromJson.get("tickers") as JsonArray).get(1) as JsonObject
-            val name = fromJson.get("name").asString
-            val ticker = jsonObject.get("base").asString
-            val price = jsonObject.get("last").asFloat
+            val time = (fromJson.get("status") as JsonObject).get("timestamp").asString
+
+            val data = fromJson.get("data") as JsonObject
+            val name = data.get("name").asString
+            val ticker = data.get("symbol").asString
+            val marketData = (data.get("market_data") as JsonObject).get("ohlcv_last_1_hour") as JsonObject
+            val high = marketData.get("high").asFloat
+            val low = marketData.get("low").asFloat
+
             coinList.add(
                 CoinDto(
+                    time = time,
                     name = name,
                     ticker = ticker,
-                    cost = Cost(low = price, high = price, currency = "USD")
+                    cost = Cost(high = high, low = low, currency = "USD")
                 )
             )
         }
@@ -102,7 +113,10 @@ class CoinMarketService(
         val client: CloseableHttpClient = HttpClients.createDefault()
         val request = HttpGet(query.build())
         request.setHeader(HttpHeaders.ACCEPT, "application/json")
-        if (aut) request.addHeader("CB-ACCESS-KEY ", apikey)
+        if (aut)
+            request.addHeader("CB-ACCESS-KEY", coinBaseApiKey)
+        else
+            request.addHeader("x-messari-api-key", messariApiKey)
         val response: CloseableHttpResponse = client.execute(request)
         response.use {
             //println(it.statusLine)
